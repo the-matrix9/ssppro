@@ -5,27 +5,35 @@ import os
 
 app = Flask(__name__)
 
+# Optional: Add cookies here if needed for age-restricted content
+cookies_str = (
+    "cookie_accept_v2=%7B%22e%22%3A1%2C%22f%22%3A1%2C%22t%22%3A1%2C%22a%22%3A1%7D;"
+)
+
 @app.route('/')
 def home():
     return '''
     <h2>XHamster Full HD Video Downloader API</h2>
-    <p>Use endpoint <code>/download?url=VIDEO_URL</code> to download.</p>
-    <p>Made with ❤️ by <b>@cyber_ansh</b></p>
+    <p>Usage: <code>/download?url=https://xhamster.com/videos/your-link</code></p>
+    <p><b>Credit:</b> Made by @cyber_ansh</p>
     '''
 
 @app.route('/download')
 def download_video():
     url = request.args.get('url')
     if not url:
-        abort(400, description="Missing 'url' query parameter")
+        abort(400, description="❌ Missing 'url' query parameter!")
 
-    # yt-dlp options
     ydl_opts = {
         'format': 'best[ext=mp4]/best',
         'quiet': True,
         'no_warnings': True,
         'noplaylist': True,
         'outtmpl': '%(id)s.%(ext)s',
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0',
+            'Cookie': cookies_str
+        }
     }
 
     try:
@@ -49,8 +57,10 @@ def download_video():
                                 "Content-Disposition": f"attachment; filename={os.path.basename(filename)}"
                             })
 
+    except yt_dlp.utils.DownloadError as e:
+        abort(400, description=f"❌ Download error: {str(e)}")
     except Exception as e:
-        abort(400, description=f"Failed to download video: {str(e)}")
+        abort(500, description=f"❌ Internal error: {str(e)}")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
